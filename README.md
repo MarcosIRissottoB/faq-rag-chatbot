@@ -20,8 +20,23 @@ Chatbot de preguntas frecuentes (FAQ) con RAG para HR SaaS: se construye un índ
 2. Instalar dependencias:
    `pip install -r requirements.txt`
 
-3. Copiar `.env.example` a `.env` y rellenar las 4 variables (OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL, OPENAI_MODEL_ANSWER, OPENAI_MODEL_EVAL). Sin valores reales en el repo.
+3. Para ejecutar tests (opcional): `pip install -r requirements-dev.txt`
+
+4. Copiar `.env.example` a `.env` y rellenar las 4 variables (OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL, OPENAI_MODEL_ANSWER, OPENAI_MODEL_EVAL). Sin valores reales en el repo.
    `cp .env.example .env`
+
+## Tests
+
+Tests unitarios con **pytest** para `build_index` (load_and_chunk_document, generate_embeddings, save_to_chroma, index_already_loaded) y `query` (load_chroma_collection, search_similar_chunks, generate_answer, evaluate_response, main). No se requieren API keys reales: los tests usan mocks.
+
+Desde la raíz del proyecto:
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
+En CI (GitHub Actions) los tests se ejecutan en cada push a `main`/`master` y en cada pull request.
 
 ## Cómo probar
 
