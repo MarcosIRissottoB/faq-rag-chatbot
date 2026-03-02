@@ -86,7 +86,9 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 
 **Cómo comprobarlo:** en el repositorio, pestaña **Actions** → workflow **Tests** → ver el último run. Si el job termina en verde, los tests pasaron en CI. También puedes abrir un PR y ver el estado del workflow en la página del PR.
 
-**Si el workflow falla** (p. ej. "Process completed with exit code 2"): ver [docs/CI.md](docs/CI.md) para códigos de salida de pytest, cómo ver el log completo del paso "Run tests" y los ajustes aplicados en este repo (PYTHONPATH, `src/__init__.py`, etc.).
+**Antes de hacer push:** para evitar que falle el CI sin haber probado, ejecuta en local los mismos pasos que el workflow (Debug imports + pytest). Ver [docs/CI.md](docs/CI.md) sección **"Antes de push: validar en local"** (venv con Python 3.11, `pip install -r requirements.txt -r requirements-dev.txt`, `pip install -e .`, luego `./scripts/simulate_ci_debug.sh`).
+
+**Si el workflow falla** (p. ej. "Process completed with exit code 2"): ver [docs/CI.md](docs/CI.md) para códigos de salida de pytest, cómo ver el log completo del paso "Run tests" y los ajustes aplicados en este repo.
 
 ## Cómo probar
 

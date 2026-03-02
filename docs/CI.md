@@ -11,12 +11,13 @@ Este documento describe el flujo de CI del proyecto y cómo diagnosticar fallos 
 - **Pasos:**
   1. Checkout del código.
   2. Configuración de Python 3.11.
-  3. **Install system deps:** `build-essential` y `libsqlite3-dev` (ChromaDB/SQLite en Linux).
-  4. Cache de pip (clave: hash de `requirements.txt`, `requirements-dev.txt`, `pyproject.toml`).
-  5. Instalación de dependencias: `pip install -r requirements.txt` y `pip install -r requirements-dev.txt`.
-  6. **Install project:** `pip install -e .` (instalación editable desde `pyproject.toml` para resolver imports de `src`).
-  7. **Debug imports:** comprueba en el log que `chromadb`, `src`, `src.build_index` y `src.query` importen bien (diagnóstico si algo falla antes de tests).
-  8. **Run tests:** ejecuta `python -m pytest tests/ -v --tb=long` con variables de entorno para CI.
+  3. **Show environment:** imprime versión de Python, `which python` y `pip list` (primeras 30 líneas) dentro de un grupo colapsable en el log de GH, para tener más detalle si algo falla.
+  4. **Install system deps:** `build-essential` y `libsqlite3-dev` (ChromaDB/SQLite en Linux).
+  5. Cache de pip (clave: hash de `requirements.txt`, `requirements-dev.txt`, `pyproject.toml`).
+  6. Instalación de dependencias: `pip install -r requirements.txt` y `pip install -r requirements-dev.txt`.
+  7. **Install project:** `pip install -e .` (instalación editable desde `pyproject.toml` para resolver imports de `src`).
+  8. **Debug imports:** ejecuta con `set -e` y un `echo` antes de cada comprobación (`=== Checking chromadb ===`, etc.) para que el log muestre **qué** se estaba comprobando cuando falló. Comprueba en orden: Python, chromadb, src, src.constants, src.config (requiere env OPENAI_*), src.build_index, src.query.
+  9. **Run tests:** ejecuta `python -m pytest tests/ -vv -rA --tb=long` (verbose doble, resumen de todos los tests, traceback largo) con variables de entorno para CI.
 
 El proyecto **sí tiene tests** en la carpeta `tests/`:
 
@@ -77,7 +78,7 @@ Se aplicaron estos cambios para que los tests pasen en CI:
 3. **`python -m pytest ... --tb=long`** para tracebacks completos.
 4. **Install system deps:** paso que instala `build-essential` y `libsqlite3-dev` en el runner Ubuntu. En Linux, ChromaDB suele necesitar estas dependencias para compilar/usar SQLite; sin ellas es muy común un **ImportError** al importar `chromadb` y pytest devuelve exit code 2 antes de ejecutar tests.
 5. **`pyproject.toml`** en la raíz y paso **Install project** con `pip install -e .`. Así el paquete `src` queda instalado y los imports se resuelven sin depender solo de `PYTHONPATH`.
-6. **Debug imports:** paso previo a **Run tests** que ejecuta `import chromadb`, `import src`, `import src.build_index`, `import src.query`. Si algo falla, el log muestra qué import rompe (chromadb, src, etc.).
+6. **Debug imports:** paso previo a **Run tests** con `set -e` y mensajes `echo "=== Checking X ==="` antes de cada import, para que el log indique exactamente en qué comprobación se rompió. **Importante:** `src.config` se ejecuta a nivel de módulo y llama a `_required()` para OPENAI_API_KEY, OPENAI_MODEL_ANSWER, OPENAI_MODEL_EVAL y OPENAI_EMBEDDING_MODEL; si alguna no está definida en el `env` del step, el import de `src.query` (o de `src.build_index` vía llm_adapter que usa config) falla. En CI esas variables deben estar en el step "Debug imports" y "Run tests".
 
 Si tras un push el workflow sigue fallando, revisa en qué paso falla (Debug imports vs Run tests) y el mensaje en el log. Comprueba también que existan:
 
@@ -94,6 +95,55 @@ Si tras un push el workflow sigue fallando, revisa en qué paso falla (Debug imp
 - Los cambios (system deps, `pip install -e .`, Debug imports, `PYTHONPATH`, `--tb=long`) están pensados para que CI sea estable y los fallos sean fáciles de diagnosticar (si falla Debug imports, se ve el import concreto; si falla Run tests, el traceback es largo).
 
 Para más detalle sobre cómo ejecutar tests en local, ver la sección **Tests** del [README](../README.md).
+
+---
+
+## Antes de push: validar en local
+
+Para **evitar que el workflow falle en GitHub** sin haber probado antes, ejecuta en local los mismos pasos que el CI (Debug imports + pytest). Si todo pasa en local, es muy probable que pase en GH (salvo diferencias de sistema en Linux).
+
+**Requisito:** Python 3.11 (véase README y docs/PRODUCTION_ROADMAP).
+
+**Pasos (desde la raíz del repo):**
+
+```bash
+# 1. Venv con Python 3.11 (igual que en CI)
+python3.11 -m venv .venv-ci
+source .venv-ci/bin/activate   # Windows: .venv-ci\Scripts\activate
+
+# 2. Instalar como en CI (deps + proyecto editable)
+pip install -r requirements.txt -r requirements-dev.txt
+pip install -e .
+
+# 3. Mismo flujo que el job de GH: Debug imports + Run tests
+./scripts/simulate_ci_debug.sh
+```
+
+- Si el script termina en **0**: imports y tests OK; puedes hacer push con más confianza.
+- Si falla: verás en qué paso se corta (`=== Checking X ===` o un test fallido) y el traceback; corrígelo antes de push.
+
+Si no tienes Python 3.11: `pyenv install 3.11` o descarga desde python.org. El `pyproject.toml` exige `requires-python = ">=3.11"`.
+
+---
+
+## Simular el CI en local (detalle)
+
+El proyecto requiere **Python 3.11**. Para reproducir exactamente los pasos de **Debug imports** y **Run tests** como en GitHub Actions:
+
+1. Usar **Python 3.11** para crear el venv (igual que en CI). Desde la raíz del proyecto:
+   ```bash
+   python3.11 -m venv .venv-ci
+   source .venv-ci/bin/activate   # Windows: .venv-ci\Scripts\activate
+   pip install -r requirements.txt -r requirements-dev.txt
+   pip install -e .
+   ```
+2. Ejecutar el script que replica el step Debug imports y pytest:
+   ```bash
+   ./scripts/simulate_ci_debug.sh
+   ```
+   El script usa por defecto las variables de entorno de CI si no están definidas.
+
+Si algo falla, verás en qué `=== Checking X ===` se corta. En macOS/Windows no se instalan las system deps de Linux (`build-essential`, `libsqlite3-dev`); si en CI falla solo en Linux, en local puede pasar.
 
 ---
 

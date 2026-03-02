@@ -21,6 +21,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Show environment
+        run: |
+          echo "::group::Environment"
+          python --version
+          which python
+          pip list | head -30
+          echo "::endgroup::"
+
       - name: Install system deps (ChromaDB / SQLite on Linux)
         run: |
           sudo apt-get update -q
@@ -48,10 +56,22 @@ jobs:
           OPENAI_MODEL_EVAL: "gpt-4o-mini"
           OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
         run: |
+          set -e
+          echo "=== Python ==="
           python -c "import sys; print(sys.version)"
+          echo "=== Checking chromadb ==="
           python -c "import chromadb; print('chromadb OK')"
+          echo "=== Checking src ==="
           python -c "import src; print('src OK')"
-          python -c "import src.build_index; import src.query; print('src.build_index, src.query OK')"
+          echo "=== Checking src.constants ==="
+          python -c "import src.constants; print('src.constants OK')"
+          echo "=== Checking src.config (needs OPENAI_* env) ==="
+          python -c "import src.config; print('src.config OK')"
+          echo "=== Checking src.build_index ==="
+          python -c "import src.build_index; print('src.build_index OK')"
+          echo "=== Checking src.query ==="
+          python -c "import src.query; print('src.query OK')"
+          echo "=== All imports OK ==="
 
       - name: Run tests
         env:
@@ -60,4 +80,4 @@ jobs:
           OPENAI_MODEL_ANSWER: "gpt-4o-mini"
           OPENAI_MODEL_EVAL: "gpt-4o-mini"
           OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
-        run: python -m pytest tests/ -v --tb=long
+        run: python -m pytest tests/ -vv -rA --tb=long
