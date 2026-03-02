@@ -35,6 +35,7 @@ Checklist completo mapeado a cada indicador de la rúbrica. Para cada ítem se i
 | evaluate_response reason ≥50 chars | src/query.py | evaluate_response() | ✅ |
 | Evalúa ≥2 dimensiones | src/query.py + docs/prompts.md | evaluate_response() | ✅ 3 dimensiones |
 | reason con observaciones específicas | docs/prompts.md | Prompt evaluador | ✅ |
+| Logging y manejo de excepciones en llamadas LLM | src/query.py, src/utils/llm_adapter.py | generate_answer, evaluate_response, OpenAILLMProvider.chat | ✅ timeout 30s, logger.info/logger.error, tiempo medido |
 
 **Nota:** El JSON de salida tiene 4 claves (`user_question`, `system_answer`, `chunks_related`, `evaluation`); la rúbrica puede referirse a “3 claves” en sentido de bloques principales; en cualquier caso el formato exigido en el plan es el de la tabla (las 4 claves listadas).
 

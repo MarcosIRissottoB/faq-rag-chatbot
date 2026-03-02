@@ -83,6 +83,8 @@ Cada sección debe tener 2–4 párrafos claros (120–200 palabras por tema) pa
 
 **CLI:** ejecutable con `python src/query.py --question "tu pregunta"` (usar argparse); imprimir el JSON de retorno de `main(question)`.
 
+**Logging y resiliencia (implementado):** En `src/query.py` se configura un logger por módulo (StreamHandler, formato con timestamp y nivel). En `generate_answer` y `evaluate_response` se mide el tiempo de cada llamada al LLM y se registra con `logger.info`; en el `except` se usa `logger.error` antes de relanzar. La llamada real a la API está en `src/utils/llm_adapter.py` (método `OpenAILLMProvider.chat`), donde se añadió timeout de 30 s, medición de tiempo y logging de éxito/error, de modo que si falla el LLM la app no se cae sin traza.
+
 ---
 
 ## 4. outputs/sample_queries.json COMPLETA
@@ -198,4 +200,18 @@ flowchart LR
 
 ## 11. Refactors y calidad de código
 
-- **Evaluar refactors posibles:** desacoplamiento (constantes, config, prompts en JSON, utils), reutilización de código entre build_index y query (cliente OpenAI, cliente Chroma, generación de embeddings), y aplicación de buenas prácticas (clean code, SOLID donde aplique).”
+- **Evaluar refactors posibles:** desacoplamiento (constantes, config, prompts en JSON, utils), reutilización de código entre build_index y query (cliente OpenAI, cliente Chroma, generación de embeddings), y aplicación de buenas prácticas (clean code, SOLID donde aplique)."”
+
+## 12. Logging y manejo de excepciones en llamadas LLM (COMPLETADA)
+
+**Objetivo:** Evitar que un fallo del LLM derribe la aplicación sin traza y permitir observar tiempos de respuesta.
+
+**Implementado:**
+
+| Ubicación | Qué se hace |
+|-----------|--------------|
+| **src/utils/llm_adapter.py** | Logger a nivel de módulo. En `OpenAILLMProvider.chat()`: `try` con `time.time()` antes de `client.chat.completions.create(..., timeout=30)`, log de duración con `logger.info`, `except` con `logger.error` y `raise`. |
+| **src/query.py** | Logger a nivel de módulo. En `generate_answer` y `evaluate_response`: medición de tiempo alrededor de `get_llm_provider().chat(...)`, `logger.info` con tiempo transcurrido, `logger.error` en el `except` antes de relanzar `RuntimeError`. |
+
+**Reglas:** La configuración del logger (handler, formatter) se hace una vez por módulo; el bloque try/except y la medición de tiempo van dentro de las funciones que llaman al LLM.
+

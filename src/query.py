@@ -1,11 +1,20 @@
 import argparse
 import json
+import logging
+import time
 import re
 from src.constants import CHROMA_PATH, COLLECTION_NAME, MIN_CHUNK_SCORE_THRESHOLD
 from src.config import MODEL_ANSWER, MODEL_EVAL
 from src.utils.chroma_client import get_vector_store
 from src.utils.llm_adapter import get_embedding_provider, get_llm_provider
 from src.prompts import SYSTEM_PROMPT_ANSWER, SYSTEM_PROMPT_EVAL
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+_handler = logging.StreamHandler()
+_formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+_handler.setFormatter(_formatter)
+logger.addHandler(_handler)
 
 
 def load_chroma_collection():
@@ -62,12 +71,17 @@ Pregunta del usuario: {question}
 Responde usando solo el contexto de arriba.
 """
     try:
-        return get_llm_provider().chat(
+        start_time = time.time()
+        result = get_llm_provider().chat(
             model=MODEL_ANSWER,
             system=SYSTEM_PROMPT_ANSWER,
             user=user_content,
         )
+        elapsed = time.time() - start_time
+        logger.info(f"generate_answer completed in {elapsed:.2f}s")
+        return result
     except Exception as e:
+        logger.error(f"generate_answer failed: {e}")
         raise RuntimeError(f"Error al generar respuesta: {e}") from e
 
 
@@ -86,12 +100,16 @@ def evaluate_response(question, answer, chunks):
 
     Evalúa y devuelve solo un JSON con "score" (entero 0-10) y "reason" (string de al menos 50 caracteres)."""
     try:
+        start_time = time.time()
         raw = get_llm_provider().chat(
             model=MODEL_EVAL,
             system=SYSTEM_PROMPT_EVAL,
             user=user_content,
         )
+        elapsed = time.time() - start_time
+        logger.info(f"evaluate_response completed in {elapsed:.2f}s")
     except Exception as e:
+        logger.error(f"evaluate_response failed: {e}")
         raise RuntimeError(f"Error al evaluar respuesta: {e}") from e
     try:
         json_str = re.sub(r"^.*?(\{.*\}).*$", r"\1", raw, flags=re.DOTALL)
@@ -131,7 +149,15 @@ def main(question):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--question", required=True, help="Pregunta para el chatbot")
+    parser.add_argument(
+        "--question", type=str, required=True, help="Pregunta para el chatbot"
+    )
     args = parser.parse_args()
-    result = main(args.question)
+
+    question = args.question.strip()
+    if not question:
+        raise ValueError("Question cannot be empty")
+    if len(question) < 5:
+        raise ValueError("Question too short")
+    result = main(question)
     print(json.dumps(result, ensure_ascii=False, indent=2))

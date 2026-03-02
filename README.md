@@ -95,16 +95,17 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 - **Chunking:** ventana por palabras con overlap para no cortar frases y mantener contexto; tamaño 300 palabras y overlap 50 para equilibrar granularidad y coherencia.
 - **Búsqueda:** similitud coseno sobre embeddings en ChromaDB (text-embedding-3-small) para recuperar los chunks más relevantes antes de generar la respuesta con el LLM.
 - **Evaluación:** cada respuesta se evalúa con un score de 0 a 10 y un motivo (reason); el resultado se incluye en la salida JSON del CLI y en `outputs/sample_queries.json`.
+- **Logging y resiliencia en llamadas LLM:** en `src/query.py` y `src/utils/llm_adapter.py` se configura logging por módulo (StreamHandler, formato con timestamp y nivel). Las llamadas al LLM se miden en tiempo (log de duración en segundos), tienen timeout de 30 s en el adaptador y, ante fallo, se registra el error con `logger.error` antes de relanzar la excepción, evitando que la app se caiga sin traza.
 
 ## Estructura del proyecto
 
 - `data/faq_document.txt`: documento fuente de FAQs (texto plano, ≥1000 palabras).
 - `src/build_index.py`: script que carga el documento, lo divide en chunks, genera embeddings y guarda en ChromaDB.
-- `src/query.py`: script que recibe una pregunta, busca chunks similares, genera la respuesta con el LLM y devuelve JSON (user_question, system_answer, chunks_related, evaluation).
+- `src/query.py`: script que recibe una pregunta, busca chunks similares, genera la respuesta con el LLM y devuelve JSON (user_question, system_answer, chunks_related, evaluation); incluye logging y medición de tiempo en las llamadas al LLM.
 - `outputs/sample_queries.json`: ejemplos de salida del pipeline de consultas (≥3 pares pregunta–respuesta).
 - `chroma_db/`: directorio de persistencia de ChromaDB (generado al ejecutar build_index).
 - `src/config.py`, `src/constants.py`: configuración y constantes.
-- `src/utils/`: cliente ChromaDB y adaptador LLM/embeddings.
+- `src/utils/`: cliente ChromaDB y adaptador LLM/embeddings (en `llm_adapter.py`: timeout 30 s y logging de llamadas y errores).
 - `src/prompts/`: prompts del LLM (respuesta y evaluación).
 - `tests/`: tests unitarios (pytest) para `build_index` y `query`; `requirements-dev.txt` para dependencias de test.
 - `.github/workflows/test.yml`: workflow de CI que ejecuta los tests en cada push y en cada pull request.

@@ -90,3 +90,14 @@ Este orden está implementado en `src/query.py` en `main(question)`:
 4. `evaluate_response(question, answer, chunks)` → se evalúa la respuesta con los mismos chunks
 
 La recuperación siempre ocurre antes de la generación; no se usa el LLM para “elegir” chunks, solo para responder a partir de los ya recuperados.
+
+---
+
+## Operación y resiliencia en llamadas al LLM
+
+Para que un fallo del LLM no derribe la aplicación sin traza y se puedan observar tiempos de respuesta:
+
+- **Adaptador (src/utils/llm_adapter.py):** En `OpenAILLMProvider.chat()` se configura un logger a nivel de módulo; la llamada a `client.chat.completions.create` se hace con `timeout=30`, dentro de un `try` que mide el tiempo y registra éxito con `logger.info`; en el `except` se registra el error con `logger.error` y se relanza la excepción.
+- **Orquestador (src/query.py):** En `generate_answer` y `evaluate_response` se mide el tiempo alrededor de `get_llm_provider().chat(...)`, se registra la duración con `logger.info` y, en caso de excepción, se usa `logger.error` antes de relanzar `RuntimeError`.
+
+Así las fallas de red o de API quedan registradas y el comportamiento es predecible (timeout y re-raise) en lugar de caídas silenciosas.

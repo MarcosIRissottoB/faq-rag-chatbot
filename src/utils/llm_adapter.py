@@ -1,10 +1,19 @@
 """Adaptador de LLM/embeddings para no acoplarse a un proveedor concreto."""
 
 from abc import ABC, abstractmethod
+import logging
+import time
 from typing import List
 
 from src.config import EMBEDDING_MODEL
 from src.utils import get_openai_client
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 class EmbeddingProvider(ABC):
@@ -43,14 +52,23 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 class OpenAILLMProvider(LLMProvider):
     def chat(self, model: str, system: str, user: str) -> str:
         client = get_openai_client()
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        )
-        return (resp.choices[0].message.content or "").strip()
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        try:
+            start_time = time.time()
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                timeout=30,
+            )
+            elapsed = time.time() - start_time
+            logger.info(f"LLM answered in {elapsed:.2f}s")
+            return (response.choices[0].message.content or "").strip()
+        except Exception as e:
+            logger.error(f"OpenAI call failed: {str(e)}")
+            raise
 
 
 def get_embedding(text: str, model: str | None = None) -> List[float]:
