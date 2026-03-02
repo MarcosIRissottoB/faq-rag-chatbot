@@ -11,9 +11,12 @@ Este documento describe el flujo de CI del proyecto y cómo diagnosticar fallos 
 - **Pasos:**
   1. Checkout del código.
   2. Configuración de Python 3.11.
-  3. Cache de pip (clave: hash de `requirements.txt` y `requirements-dev.txt`).
-  4. Instalación de dependencias: `pip install -r requirements.txt` y `pip install -r requirements-dev.txt`.
-  5. **Run tests:** ejecuta `python -m pytest tests/ -v --tb=long` con variables de entorno para CI (API key falsa, modelos, etc.).
+  3. **Install system deps:** `build-essential` y `libsqlite3-dev` (ChromaDB/SQLite en Linux).
+  4. Cache de pip (clave: hash de `requirements.txt`, `requirements-dev.txt`, `pyproject.toml`).
+  5. Instalación de dependencias: `pip install -r requirements.txt` y `pip install -r requirements-dev.txt`.
+  6. **Install project:** `pip install -e .` (instalación editable desde `pyproject.toml` para resolver imports de `src`).
+  7. **Debug imports:** comprueba en el log que `chromadb`, `src`, `src.build_index` y `src.query` importen bien (diagnóstico si algo falla antes de tests).
+  8. **Run tests:** ejecuta `python -m pytest tests/ -v --tb=long` con variables de entorno para CI.
 
 El proyecto **sí tiene tests** en la carpeta `tests/`:
 
@@ -69,13 +72,16 @@ El workflow está configurado con `--tb=long` para que, en caso de fallo, el tra
 
 Se aplicaron estos cambios para que los tests pasen en CI:
 
-1. **`PYTHONPATH: "."`** en el step **Run tests** del workflow, para que el intérprete encuentre el paquete `src` desde la raíz del repo.
-2. **`src/__init__.py`** (archivo vacío) para que `src` sea un paquete Python y los imports `from src.build_index` / `from src.query` funcionen en el runner.
-3. **`python -m pytest tests/ -v --tb=long`** para usar el mismo Python donde se instalaron las dependencias y para obtener tracebacks largos si algo falla.
+1. **`PYTHONPATH: "."`** en el step **Run tests** del workflow.
+2. **`src/__init__.py`** (archivo vacío) para que `src` sea un paquete Python.
+3. **`python -m pytest ... --tb=long`** para tracebacks completos.
+4. **Install system deps:** paso que instala `build-essential` y `libsqlite3-dev` en el runner Ubuntu. En Linux, ChromaDB suele necesitar estas dependencias para compilar/usar SQLite; sin ellas es muy común un **ImportError** al importar `chromadb` y pytest devuelve exit code 2 antes de ejecutar tests.
+5. **`pyproject.toml`** en la raíz y paso **Install project** con `pip install -e .`. Así el paquete `src` queda instalado y los imports se resuelven sin depender solo de `PYTHONPATH`.
+6. **Debug imports:** paso previo a **Run tests** que ejecuta `import chromadb`, `import src`, `import src.build_index`, `import src.query`. Si algo falla, el log muestra qué import rompe (chromadb, src, etc.).
 
-Si tras un push el workflow sigue fallando, revisa el log del paso **Run tests** (como en la sección anterior) y comprueba que existan:
+Si tras un push el workflow sigue fallando, revisa en qué paso falla (Debug imports vs Run tests) y el mensaje en el log. Comprueba también que existan:
 
-- `requirements.txt` y `requirements-dev.txt` en la raíz.
+- `requirements.txt`, `requirements-dev.txt` y `pyproject.toml` en la raíz.
 - Carpeta `tests/` con los archivos de test.
 - Carpeta `src/` con `__init__.py` y los módulos que importan los tests.
 
@@ -85,6 +91,37 @@ Si tras un push el workflow sigue fallando, revisa el log del paso **Run tests**
 
 - El workflow ejecuta los tests con pytest en Python 3.11; el proyecto tiene tests en `tests/`.
 - **Exit code 2** suele indicar problema de imports o de colección de tests; el mensaje concreto está en el **log del paso "Run tests"** en GitHub Actions.
-- Los cambios de `PYTHONPATH`, `src/__init__.py` y `python -m pytest ... --tb=long` están pensados para que CI sea estable y los fallos sean fáciles de diagnosticar.
+- Los cambios (system deps, `pip install -e .`, Debug imports, `PYTHONPATH`, `--tb=long`) están pensados para que CI sea estable y los fallos sean fáciles de diagnosticar (si falla Debug imports, se ve el import concreto; si falla Run tests, el traceback es largo).
 
 Para más detalle sobre cómo ejecutar tests en local, ver la sección **Tests** del [README](../README.md).
+
+---
+
+## Qué ya probamos (si sigue fallando)
+
+Lista de cambios aplicados para intentar resolver el fallo de CI (exit code 2). Si el workflow sigue fallando, sirve para no repetir y para probar alternativas.
+
+| # | Qué probamos | Dónde | Resultado |
+|---|----------------|-------|-----------|
+| 1 | **PYTHONPATH: "."** en el step "Run tests" | `.github/workflows/test.yml` | Solo no alcanzaba |
+| 2 | **src/__init__.py** (archivo vacío) | `src/__init__.py` | Solo no alcanzaba |
+| 3 | **python -m pytest** en lugar de `pytest` | workflow | Aplicado |
+| 4 | **--tb=long** para traceback completo | workflow | Aplicado |
+| 5 | **Install system deps** (build-essential, libsqlite3-dev) | workflow, antes de Install dependencies | Aplicado — evita ImportError de chromadb en Linux |
+| 6 | **pyproject.toml** + **pip install -e .** | `pyproject.toml` (nuevo) + step "Install project" | Aplicado — resuelve imports de `src` de forma robusta |
+| 7 | **Debug imports** (chromadb, src, src.build_index, src.query) | workflow, antes de Run tests | Aplicado — diagnóstico: si falla, el log muestra qué import rompe |
+
+---
+
+## Alternativas a probar
+
+Si el CI sigue con exit code 2, probar en este orden:
+
+1. **Ver el log real:** En Actions → run fallido → job "test (3.11)" → expandir el paso **"Run tests"** y copiar el traceback/mensaje de error (ModuleNotFoundError, FAILED, etc.). Eso indica la causa exacta.
+2. **Instalar el proyecto como paquete:** Crear `pyproject.toml` o `setup.py` y en el workflow añadir un step después de "Install dependencies": `pip install -e .` (instalación editable). Así `src` queda en el path sin depender de PYTHONPATH.
+3. **Añadir paso de diagnóstico:** Antes de "Run tests", un step que ejecute `python -c "import sys; print(sys.path); import src; print('src OK')"` para comprobar en el log si `src` se importa.
+4. **Desactivar cache de pip:** Comentar o quitar el step "Cache pip" por si la cache devuelve un entorno corrupto o desactualizado.
+5. **Dependencias de sistema (ChromaDB):** Si el log muestra error al importar `chromadb` o al compilar, añadir antes de "Install dependencies" un step que instale dependencias del sistema, p. ej. `sudo apt-get update && sudo apt-get install -y build-essential`.
+6. **Versiones de dependencias:** Revisar que `requirements.txt` y `requirements-dev.txt` tengan versiones compatibles con Python 3.11 en Linux; ChromaDB a veces requiere versiones concretas de numpy.
+7. **Ejecutar tests por archivo:** En el workflow, cambiar a `python -m pytest tests/test_build_index.py -v --tb=long` (solo un archivo) para ver si el fallo es de colección o de un test concreto.
+8. **Job mínimo de diagnóstico:** Crear un workflow aparte (p. ej. `ci-debug.yml`) que solo haga checkout, setup Python, pip install, y luego `python -c "import sys; sys.path.insert(0, '.'); import src.build_index; print('OK')"` para aislar si el problema es import o pytest.

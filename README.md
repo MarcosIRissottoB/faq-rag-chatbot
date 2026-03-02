@@ -123,5 +123,6 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 - `src/utils/`: cliente ChromaDB y adaptador LLM/embeddings (en `llm_adapter.py`: timeout 30 s y logging de llamadas y errores).
 - `src/prompts/`: prompts del LLM (respuesta y evaluación).
 - `tests/`: tests unitarios (pytest) para `build_index` y `query`; `requirements-dev.txt` para dependencias de test.
+- `pyproject.toml`: definición del proyecto e instalación editable (`pip install -e .`) para CI y desarrollo.
 - `.github/workflows/test.yml`: workflow de CI que ejecuta los tests en cada push y en cada pull request.
 - `docs/`: documentación (flujo de datos, decisiones RAG, prompts, checklist, **CI.md** para troubleshooting de GitHub Actions).
