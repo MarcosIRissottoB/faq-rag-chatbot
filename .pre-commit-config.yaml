@@ -19,7 +19,6 @@ repos:
     hooks:
       - id: pytest
         name: pytest
-        entry: pytest
+        entry: .venv/bin/python -m pytest tests/
         language: system
-        types: [python]
-        pass_filenames: false 
+        pass_filenames: false

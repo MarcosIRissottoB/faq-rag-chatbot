@@ -14,13 +14,16 @@ Chatbot de preguntas frecuentes (FAQ) con RAG para HR SaaS: se construye un índ
 ## Instalación
 
 1. **Crear y activar el entorno virtual** (recomendado):
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate   # Windows: .venv\Scripts\activate
    ```
+
    Si tienes Python 3.11: `python3.11 -m venv .venv`. Si no, `python3` (3.9+) suele bastar.
 
 2. **Instalar dependencias:**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -37,14 +40,17 @@ El proyecto incluye **tests unitarios** con pytest para los módulos `build_inde
 **Cómo ejecutar los tests** (desde la raíz del proyecto, con el venv activado):
 
 1. Instalar dependencias de test (solo la primera vez):
+
    ```bash
    pip install -r requirements-dev.txt
    ```
 
 2. Ejecutar todos los tests:
+
    ```bash
    pytest tests/ -v
    ```
+
    Si el comando `pytest` no se encuentra: `python3 -m pytest tests/ -v`
 
 3. Si falla el import por falta de `.env`, puedes usar variables dummy solo para los tests:
@@ -86,6 +92,12 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
    `python -m src.build_index`
    Para **reconstruir el índice** (por ejemplo tras cambiar el documento o la métrica de Chroma):  
    `python -m src.build_index --force`
+
+   **Chunking (por defecto, sin flags):** se toma de `src/constants.py` usando `CHUNK_SIZE_DEFAULT` y `CHUNK_OVERLAP_DEFAULT`.
+   Si quieres cambiar los defaults para no pasar flags en cada ejecución, edita esos valores en `src/constants.py`.
+
+   **Override opcional por CLI (si necesitas probar valores puntuales):**
+   `python -m src.build_index --chunk-size 250 --chunk-overlap 50`
 
 2. Hacer una consulta:
    `python -m src.query --question "¿Qué pasos debo seguir en mi proceso de onboarding?"`

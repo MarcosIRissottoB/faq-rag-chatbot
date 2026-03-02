@@ -1,4 +1,4 @@
-import sys
+import argparse
 from pathlib import Path
 import hashlib
 from src.constants import (
@@ -6,6 +6,8 @@ from src.constants import (
     CHROMA_PATH,
     COLLECTION_NAME,
     DEFAULT_DOC_PATH,
+    CHUNK_SIZE_DEFAULT,
+    CHUNK_OVERLAP_DEFAULT,
 )
 from src.utils.llm_adapter import get_embedding_provider
 from src.utils.chroma_client import get_vector_store
@@ -92,7 +94,7 @@ def save_to_chroma(chunks, embeddings, doc_source_hash):
         raise RuntimeError(f"Error al guardar en ChromaDB: {e}") from e
 
 
-def main(doc_path=None, force=False):
+def main(doc_path=None, force=False, chunk_size=None, chunk_overlap=None):
     """Orquesta: cargar y chunkear documento, generar embeddings, guardar en ChromaDB. Imprime resumen.
     No vuelve a cargar si el documento ya está en la DB y no cambió."""
     path = Path(doc_path or DEFAULT_DOC_PATH)
@@ -100,7 +102,18 @@ def main(doc_path=None, force=False):
         raise FileNotFoundError(f"Documento no encontrado: {path}")
     doc_content = path.read_text(encoding="utf-8")
     doc_source_hash = hashlib.sha256(doc_content.encode()).hexdigest()
-    chunks = load_and_chunk_document(path)
+
+    effective_chunk_size = CHUNK_SIZE_DEFAULT if chunk_size is None else chunk_size
+    effective_chunk_overlap = (
+        CHUNK_OVERLAP_DEFAULT if chunk_overlap is None else chunk_overlap
+    )
+
+    chunks = load_and_chunk_document(
+        path,
+        chunk_size=effective_chunk_size,
+        overlap=effective_chunk_overlap,
+    )
+
     store = get_vector_store()
     if not force and index_already_loaded(store, doc_source_hash, len(chunks)):
         print(
@@ -116,8 +129,27 @@ def main(doc_path=None, force=False):
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    flags = [a for a in sys.argv[1:] if a.startswith("--")]
-    path = args[0] if args else None
-    force = "--force" in flags
-    main(path, force=force)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", nargs="?", default=None, help="Ruta al documento FAQ")
+    parser.add_argument(
+        "--force", action="store_true", help="Reconstruir índice aunque ya exista"
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=None,
+        help="Tamaño del chunk; si se omite, se usa CHUNK_SIZE_DEFAULT",
+    )
+    parser.add_argument(
+        "--chunk-overlap",
+        type=int,
+        default=None,
+        help="Solapamiento entre chunks; si se omite, se usa CHUNK_OVERLAP_DEFAULT",
+    )
+    args = parser.parse_args()
+    main(
+        args.path,
+        force=args.force,
+        chunk_size=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
+    )

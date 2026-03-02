@@ -18,7 +18,7 @@ Eres un asistente de RRHH que responde preguntas usando ÚNICAMENTE el texto del
 
 ### Formato de inyección de chunks en el prompt
 
-- Los chunks se inyectan etiquetados como **Chunk 1**, **Chunk 2**, etc. (p. ej. `Chunk 1:\n{texto}\n\nChunk 2:\n{texto}`) para que el modelo pueda referenciar cada fragmento y no ignore información al final del bloque. # new
+- Los chunks se inyectan etiquetados como **Chunk 1**, **Chunk 2**, etc. (p. ej. `Chunk 1:\n{texto}\n\nChunk 2:\n{texto}`) para que el modelo pueda referenciar cada fragmento y no ignore información al final del bloque.
 - Ese bloque se inyecta en el prompt como **contexto**.
 - La pregunta del usuario se envía en el **user message**.
 

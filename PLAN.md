@@ -52,7 +52,8 @@ Cada sección debe tener 2–4 párrafos claros (120–200 palabras por tema) pa
 | 3   | `save_to_chroma(chunks, embeddings)`                        | chunks, embeddings | None              | Crear/persistir ChromaDB en ruta local (ej. ./chroma_db); colección "faq"; añadir documentos (chunks) e embeddings; IDs únicos (ej. chunk_0, chunk_1, ...).                                                 |
 | 4   | `main()`                                                    | —                  | —                 | Definir path por defecto al documento (ej. data/faq_document.txt); llamar 1 → 2 → 3; imprimir resumen: nº chunks, dimensión del embedding, ruta de ChromaDB.                                                |
 
-**Reglas:** cada función ≤30 líneas; manejo de errores en cada una (archivo no encontrado, API key ausente, error de ChromaDB); ejecución directa con `python src/build_index.py` (path del documento configurable por argumento o constante).
+**Reglas:** cada función ≤30 líneas; manejo de errores en cada una (archivo no encontrado, API key ausente, error de ChromaDB); ejecución directa con `python -m src.build_index` (path del documento configurable por argumento o constante).
+Defaults de chunking en `src/constants.py`: `CHUNK_SIZE_DEFAULT` y `CHUNK_OVERLAP_DEFAULT` (los flags de CLI sólo sobreescriben).
 
 ---
 
@@ -145,7 +146,7 @@ Sin valores reales; comentario opcional de una línea indicando que se copie a `
 - **Requisitos:** Python 3.11, cuenta OpenAI con API key.
 - **Instalación:** `pip install -r requirements.txt`, copiar `.env.example` a `.env`, configurar `OPENAI_API_KEY`.
 - **Uso:**
-  - Construir índice: `python src/build_index.py` (opcional: argumento con path del documento).
+  - Construir índice: `python -m src.build_index` (opcional: argumento con path del documento).
   - Consultar: `python src/query.py --question "tu pregunta"`.
 - **Decisiones técnicas** (1–2 oraciones cada una):
   - Chunking: ventana por palabras con overlap para no cortar frases y mantener contexto; tamaño 300 palabras y overlap 50 para equilibrar granularidad y coherencia.
@@ -194,7 +195,7 @@ flowchart LR
 - **Query:** salida JSON con exactamente `user_question`, `system_answer`, `chunks_related` (lista de `{"text", "score"}`), `evaluation` (siempre incluida).
 - **search_similar_chunks:** cada elemento retornado es dict con "text" y "score" (similitud coseno).
 - **Evaluación:** `evaluate_response` devuelve `{"score": int 0-10, "reason": str}` con `len(reason) >= 50`.
-- **CLI:** `python src/build_index.py` y `python src/query.py --question "..."` funcionando.
+- **CLI:** `python -m src.build_index` y `python src/query.py --question "..."` funcionando.
 - **Código:** funciones ≤30 líneas, API key solo por `os.getenv`, manejo de errores en cada función.
 - **sample_queries.json:** las 3 entradas son respuestas reales del sistema, generadas tras ejecutar build_index y query.
 
@@ -208,10 +209,9 @@ flowchart LR
 
 **Implementado:**
 
-| Ubicación | Qué se hace |
-|-----------|--------------|
-| **src/utils/llm_adapter.py** | Logger a nivel de módulo. En `OpenAILLMProvider.chat()`: `try` con `time.time()` antes de `client.chat.completions.create(..., timeout=30)`, log de duración con `logger.info`, `except` con `logger.error` y `raise`. |
-| **src/query.py** | Logger a nivel de módulo. En `generate_answer` y `evaluate_response`: medición de tiempo alrededor de `get_llm_provider().chat(...)`, `logger.info` con tiempo transcurrido, `logger.error` en el `except` antes de relanzar `RuntimeError`. |
+| Ubicación                    | Qué se hace                                                                                                                                                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **src/utils/llm_adapter.py** | Logger a nivel de módulo. En `OpenAILLMProvider.chat()`: `try` con `time.time()` antes de `client.chat.completions.create(..., timeout=30)`, log de duración con `logger.info`, `except` con `logger.error` y `raise`.                       |
+| **src/query.py**             | Logger a nivel de módulo. En `generate_answer` y `evaluate_response`: medición de tiempo alrededor de `get_llm_provider().chat(...)`, `logger.info` con tiempo transcurrido, `logger.error` en el `except` antes de relanzar `RuntimeError`. |
 
 **Reglas:** La configuración del logger (handler, formatter) se hace una vez por módulo; el bloque try/except y la medición de tiempo van dentro de las funciones que llaman al LLM.
-
