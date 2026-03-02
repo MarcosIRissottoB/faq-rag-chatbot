@@ -1,0 +1,5 @@
+CHROMA_PATH = "./chroma_db"
+COLLECTION_NAME = "faq"
+DEFAULT_DOC_PATH = "data/faq_document.txt"
+CHROMA_DISTANCE_METRIC = "cosine"
+MIN_CHUNK_SCORE_THRESHOLD = 0.2
