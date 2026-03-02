@@ -32,9 +32,11 @@ En el código se valida tras generar los chunks:
 
 ### Parámetros en el código
 
-- **Archivo:** `src/build_index.py`
-- **Función:** `load_and_chunk_document(path, chunk_size=300, overlap=50)`
-- **Parámetros:** `chunk_size` y `overlap` son argumentos de la función (por defecto 300 y 50), de modo que la estrategia es configurable sin tocar la lógica interna.
+- **Archivo:** `src/build_index.py` (y valores por defecto en `src/constants.py`).
+- **Función:** `load_and_chunk_document(path, chunk_size=300, overlap=50)`.
+- **Valores por defecto:** definidos en `src/constants.py` como `CHUNK_SIZE_DEFAULT` (300) y `CHUNK_OVERLAP_DEFAULT` (50); el script `build_index` los usa cuando no se pasan argumentos.
+- **Override por CLI:** se pueden sobrescribir con `--chunk-size` y `--chunk-overlap` al ejecutar `python -m src.build_index`.
+- La estrategia es configurable sin tocar la lógica interna (constantes o argumentos de función).
 
 ---
 

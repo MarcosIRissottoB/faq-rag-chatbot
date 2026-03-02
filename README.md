@@ -90,6 +90,7 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 
 1. **Construir el índice** (desde la raíz del proyecto):
    `python -m src.build_index`
+   Si el índice ya está creado y el documento no ha cambiado, verás el mensaje *"Índice ya cargado (documento sin cambios)...";* en ese caso no se reconstruye a menos que uses `--force`.
    Para **reconstruir el índice** (por ejemplo tras cambiar el documento o la métrica de Chroma):  
    `python -m src.build_index --force`
 

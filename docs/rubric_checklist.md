@@ -79,11 +79,11 @@ grep -n "chunk_size\|overlap\|50\|500\|20" src/build_index.py
 
 ```bash
 # Una consulta de ejemplo
-python src/query.py --question "¿Qué pasos debo seguir en mi proceso de onboarding?"
+python -m src.query --question "¿Qué pasos debo seguir en mi proceso de onboarding?"
 
 # La salida debe ser un único JSON con: user_question, system_answer, chunks_related (lista de {text, score}), evaluation (score, reason).
 # chunks_related debe tener entre 2 y 5 elementos.
-python src/query.py --question "¿Cuántos días de vacaciones tengo?" | python -m json.tool
+python -m src.query --question "¿Cuántos días de vacaciones tengo?" | python -m json.tool
 ```
 
 ### 5. Evaluación (score y reason)
