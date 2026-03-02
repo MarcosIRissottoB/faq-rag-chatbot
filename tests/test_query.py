@@ -1,5 +1,5 @@
 """Tests unitarios para src/query.py: load_chroma_collection, search_similar_chunks, generate_answer, evaluate_response, main."""
-import json
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -30,7 +30,10 @@ class TestLoadChromaCollection:
         with patch("src.query.get_vector_store", return_value=mock_store):
             with pytest.raises(RuntimeError) as exc_info:
                 load_chroma_collection()
-        assert "No se pudo cargar" in str(exc_info.value) or "colección" in str(exc_info.value).lower()
+        assert (
+            "No se pudo cargar" in str(exc_info.value)
+            or "colección" in str(exc_info.value).lower()
+        )
 
 
 class TestSearchSimilarChunks:
@@ -84,7 +87,9 @@ class TestGenerateAnswer:
             m_get.return_value.chat.side_effect = Exception("API error")
             with pytest.raises(RuntimeError) as exc_info:
                 generate_answer("q", [{"text": "c"}])
-            assert "generar" in str(exc_info.value).lower() or "Error" in str(exc_info.value)
+            assert "generar" in str(exc_info.value).lower() or "Error" in str(
+                exc_info.value
+            )
 
 
 class TestEvaluateResponse:
@@ -127,7 +132,10 @@ class TestMain:
             with patch("src.query.get_embedding_provider") as m_emb:
                 m_emb.return_value.embed.return_value = [0.0] * 10
                 with patch("src.query.get_llm_provider") as m_llm:
-                    m_llm.return_value.chat.side_effect = ["Respuesta RAG", '{"score": 7, "reason": "Evaluación suficiente con al menos cincuenta caracteres de justificación."}']
+                    m_llm.return_value.chat.side_effect = [
+                        "Respuesta RAG",
+                        '{"score": 7, "reason": "Evaluación suficiente con al menos cincuenta caracteres de justificación."}',
+                    ]
                     result = main("¿Pregunta de prueba?")
         assert "user_question" in result
         assert "system_answer" in result

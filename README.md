@@ -13,30 +13,72 @@ Chatbot de preguntas frecuentes (FAQ) con RAG para HR SaaS: se construye un índ
 
 ## Instalación
 
-1. Entorno (crear y activar venv, opcional):
-   `python3.11 -m venv .venv`
-   `source .venv/bin/activate`
+1. **Crear y activar el entorno virtual** (recomendado):
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate   # Windows: .venv\Scripts\activate
+   ```
+   Si tienes Python 3.11: `python3.11 -m venv .venv`. Si no, `python3` (3.9+) suele bastar.
 
-2. Instalar dependencias:
-   `pip install -r requirements.txt`
+2. **Instalar dependencias:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. Para ejecutar tests (opcional): `pip install -r requirements-dev.txt`
-
-4. Copiar `.env.example` a `.env` y rellenar las 4 variables (OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL, OPENAI_MODEL_ANSWER, OPENAI_MODEL_EVAL). Sin valores reales en el repo.
-   `cp .env.example .env`
+3. **Copiar `.env.example` a `.env`** y rellenar las variables (OPENAI_API_KEY, OPENAI_EMBEDDING_MODEL, OPENAI_MODEL_ANSWER, OPENAI_MODEL_EVAL). Sin valores reales en el repo.
+   ```bash
+   cp .env.example .env
+   ```
 
 ## Tests
 
-Tests unitarios con **pytest** para `build_index` (load_and_chunk_document, generate_embeddings, save_to_chroma, index_already_loaded) y `query` (load_chroma_collection, search_similar_chunks, generate_answer, evaluate_response, main). No se requieren API keys reales: los tests usan mocks.
+El proyecto incluye **tests unitarios** con pytest para los módulos `build_index` y `query`. No se necesitan API keys reales: los tests usan mocks.
 
-Desde la raíz del proyecto:
+**Cómo ejecutar los tests** (desde la raíz del proyecto, con el venv activado):
+
+1. Instalar dependencias de test (solo la primera vez):
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+
+2. Ejecutar todos los tests:
+   ```bash
+   pytest tests/ -v
+   ```
+   Si el comando `pytest` no se encuentra: `python3 -m pytest tests/ -v`
+
+3. Si falla el import por falta de `.env`, puedes usar variables dummy solo para los tests:
+   ```bash
+   OPENAI_API_KEY=sk-fake OPENAI_MODEL_ANSWER=gpt-4o-mini OPENAI_MODEL_EVAL=gpt-4o-mini OPENAI_EMBEDDING_MODEL=text-embedding-3-small pytest tests/ -v
+   ```
+
+**Qué se prueba:** `build_index` (load_and_chunk_document, generate_embeddings, save_to_chroma, index_already_loaded) y `query` (load_chroma_collection, search_similar_chunks, generate_answer, evaluate_response, main).
+
+## Desarrollo (linting y formato)
+
+El proyecto usa **ruff** (linting), **black** (formato) y **mypy** (tipado). Para tener estos comandos disponibles, instala las dependencias de desarrollo (igual que para los tests):
 
 ```bash
 pip install -r requirements-dev.txt
-pytest tests/ -v
 ```
 
-En CI (GitHub Actions) los tests se ejecutan en cada push a `main`/`master` y en cada pull request.
+Comandos útiles:
+
+- **Linting con ruff** (recomendado antes de hacer commit):
+  ```bash
+  ruff check . --fix
+  ```
+- **Formato con black:** `black .`
+- **Pre-commit:** si instalas los hooks con `pre-commit install`, ruff y black se ejecutan automáticamente al hacer commit (ver `.pre-commit-config.yaml`).
+
+## CI (GitHub Actions)
+
+Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
+
+- **Push** a las ramas `main` o `master`
+- **Pull request** hacia `main` o `master`
+
+**Cómo comprobarlo:** en el repositorio, pestaña **Actions** → workflow **Tests** → ver el último run. Si el job termina en verde, los tests pasaron en CI. También puedes abrir un PR y ver el estado del workflow en la página del PR.
 
 ## Cómo probar
 
@@ -64,4 +106,6 @@ En CI (GitHub Actions) los tests se ejecutan en cada push a `main`/`master` y en
 - `src/config.py`, `src/constants.py`: configuración y constantes.
 - `src/utils/`: cliente ChromaDB y adaptador LLM/embeddings.
 - `src/prompts/`: prompts del LLM (respuesta y evaluación).
+- `tests/`: tests unitarios (pytest) para `build_index` y `query`; `requirements-dev.txt` para dependencias de test.
+- `.github/workflows/test.yml`: workflow de CI que ejecuta los tests en cada push y en cada pull request.
 - `docs/`: documentación (flujo de datos, decisiones RAG, prompts, checklist).

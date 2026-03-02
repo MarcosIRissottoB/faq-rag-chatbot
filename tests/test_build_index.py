@@ -1,6 +1,6 @@
 """Tests unitarios para src/build_index.py: load_and_chunk_document, generate_embeddings, save_to_chroma, index_already_loaded."""
+
 import pytest
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from src.build_index import (
@@ -31,19 +31,27 @@ class TestLoadAndChunkDocument:
         assert len(chunks) >= 20
         for c in chunks:
             words = len(c.split())
-            assert 50 <= words * 1.3 <= 500, f"Chunk con ~{words * 1.3:.0f} tokens fuera de rango"
+            assert (
+                50 <= words * 1.3 <= 500
+            ), f"Chunk con ~{words * 1.3:.0f} tokens fuera de rango"
 
     def test_chunk_excede_500_tokens_levanta_value_error(self, huge_chunk_doc_path):
         # Con chunk_size=400 un chunk puede superar 500 tokens (400*1.3=520)
         with pytest.raises(ValueError) as exc_info:
             load_and_chunk_document(huge_chunk_doc_path, chunk_size=400, overlap=50)
-        assert "500 tokens" in str(exc_info.value) or "excede" in str(exc_info.value).lower()
+        assert (
+            "500 tokens" in str(exc_info.value)
+            or "excede" in str(exc_info.value).lower()
+        )
 
     def test_menos_de_20_chunks_validos_levanta_value_error(self, small_doc_path):
         # small_doc tiene 2000 palabras; con chunk_size=300, overlap=50 → step 250 → 8 chunks
         with pytest.raises(ValueError) as exc_info:
             load_and_chunk_document(small_doc_path)
-        assert "20 chunks" in str(exc_info.value) or "al menos 20" in str(exc_info.value).lower()
+        assert (
+            "20 chunks" in str(exc_info.value)
+            or "al menos 20" in str(exc_info.value).lower()
+        )
 
     def test_encoding_utf8(self, valid_doc_path):
         # Suficientes palabras para ≥20 chunks (chunk_size=300, overlap=50 → step 250; ~5100 palabras)
@@ -75,7 +83,9 @@ class TestGenerateEmbeddings:
             m_get.return_value = m_provider
             with pytest.raises(RuntimeError) as exc_info:
                 generate_embeddings(["un chunk"])
-            assert "embedding" in str(exc_info.value).lower() or "Error" in str(exc_info.value)
+            assert "embedding" in str(exc_info.value).lower() or "Error" in str(
+                exc_info.value
+            )
 
 
 class TestSaveToChroma:
@@ -104,10 +114,15 @@ class TestSaveToChroma:
 
     def test_error_al_guardar_levanta_runtime_error(self):
         with patch("src.build_index.get_vector_store") as m_get:
-            m_get.return_value.get_or_create_collection.side_effect = Exception("Chroma error")
+            m_get.return_value.get_or_create_collection.side_effect = Exception(
+                "Chroma error"
+            )
             with pytest.raises(RuntimeError) as exc_info:
                 save_to_chroma(["a"], [[0.1]], "hash")
-            assert "ChromaDB" in str(exc_info.value) or "guardar" in str(exc_info.value).lower()
+            assert (
+                "ChromaDB" in str(exc_info.value)
+                or "guardar" in str(exc_info.value).lower()
+            )
 
 
 class TestIndexAlreadyLoaded:
@@ -171,5 +186,7 @@ class TestMain:
                 main(valid_doc_path, force=True)
 
                 m_store.return_value.get_or_create_collection.assert_called()
-                add_call = m_store.return_value.get_or_create_collection.return_value.add
+                add_call = (
+                    m_store.return_value.get_or_create_collection.return_value.add
+                )
                 add_call.assert_called_once()

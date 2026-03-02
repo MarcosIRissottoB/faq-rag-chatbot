@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 def _required(key: str, label: str) -> str:
     val = os.getenv(key)
     if not val or not str(val).strip():
@@ -10,6 +11,7 @@ def _required(key: str, label: str) -> str:
             f"{label} no está configurada. Define {key} en .env (ej. {key}=gpt-4o-mini)."
         )
     return val.strip()
+
 
 OPENAI_API_KEY = _required("OPENAI_API_KEY", "OPENAI_API_KEY")
 MODEL_ANSWER = _required("OPENAI_MODEL_ANSWER", "OPENAI_MODEL_ANSWER")

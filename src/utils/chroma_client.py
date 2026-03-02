@@ -1,4 +1,5 @@
 """Cliente Chroma y adaptador de vector store para poder cambiar de backend sin tocar lógica de negocio."""
+
 import logging
 from typing import Optional
 from src.constants import CHROMA_PATH
@@ -8,6 +9,7 @@ from chromadb.config import Settings
 
 logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
 logging.getLogger("posthog").setLevel(logging.CRITICAL)
+
 
 class VectorStoreAdapter:
     """Interfaz del store de vectores. Implementaciones: ChromaVectorStore, (futuro OtroStore)."""
@@ -20,6 +22,7 @@ class VectorStoreAdapter:
 
     def delete_collection(self, name: str) -> None:
         raise NotImplementedError
+
 
 class ChromaVectorStore(VectorStoreAdapter):
     """Implementación usando Chroma. Hoy usamos esta; mañana puede existir otra (Pinecone, etc.)."""
@@ -41,6 +44,7 @@ class ChromaVectorStore(VectorStoreAdapter):
             self._client.delete_collection(name=name)
         except Exception:
             pass
+
 
 def get_vector_store() -> VectorStoreAdapter:
     """Factory: hoy devuelve Chroma; mañana puede devolver otro adaptador según config."""

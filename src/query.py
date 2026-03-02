@@ -7,6 +7,7 @@ from src.utils.chroma_client import get_vector_store
 from src.utils.llm_adapter import get_embedding_provider, get_llm_provider
 from src.prompts import SYSTEM_PROMPT_ANSWER, SYSTEM_PROMPT_EVAL
 
+
 def load_chroma_collection():
     """Conecta a ChromaDB en CHROMA_PATH y devuelve la colección 'faq'. Lanza si no existe."""
     try:
@@ -17,6 +18,7 @@ def load_chroma_collection():
         raise RuntimeError(
             f"No se pudo cargar la colección '{COLLECTION_NAME}' en {CHROMA_PATH}. Ejecuta antes build_index.py. Detalle: {e}"
         ) from e
+
 
 def search_similar_chunks(question, collection, top_k=5):
     """Embedea la pregunta, busca en Chroma por similitud y retorna list[dict] con 'text' y 'score' (2–5 chunks)."""
@@ -43,9 +45,12 @@ def search_similar_chunks(question, collection, top_k=5):
         out.append({"text": str(doc), "score": round(score, 6)})
     return out
 
+
 def generate_answer(question, chunks):
     """Construye contexto desde chunks, llama modelo LLM y devuelve la respuesta en texto."""
-    context = "\n\n".join(f"Chunk {i+1}:\n{c.get('text', '')}" for i, c in enumerate(chunks))
+    context = "\n\n".join(
+        f"Chunk {i+1}:\n{c.get('text', '')}" for i, c in enumerate(chunks)
+    )
     user_content = f"""Contexto (chunks recuperados):
 
 {context}
@@ -65,9 +70,12 @@ Responde usando solo el contexto de arriba.
     except Exception as e:
         raise RuntimeError(f"Error al generar respuesta: {e}") from e
 
+
 def evaluate_response(question, answer, chunks):
     """Evalúa con el modelo LLM configurado y devuelve dict con 'score' (0–10) y 'reason' (>=50 caracteres)."""
-    context = "\n\n".join(f"Chunk {i+1}:\n{c.get('text', '')}" for i, c in enumerate(chunks))
+    context = "\n\n".join(
+        f"Chunk {i+1}:\n{c.get('text', '')}" for i, c in enumerate(chunks)
+    )
     user_content = f"""Pregunta del usuario: {question}
 
     Respuesta del sistema: {answer}
@@ -89,11 +97,20 @@ def evaluate_response(question, answer, chunks):
         json_str = re.sub(r"^.*?(\{.*\}).*$", r"\1", raw, flags=re.DOTALL)
         data = json.loads(json_str)
         reason = str(data.get("reason", ""))
-        if len(reason) < 50:  
-            reason = reason + " (Evaluación incompleta: el reason debe tener al menos 50 caracteres.)" if reason else "Evaluación no válida: reason con menos de 50 caracteres."
+        if len(reason) < 50:
+            reason = (
+                reason
+                + " (Evaluación incompleta: el reason debe tener al menos 50 caracteres.)"
+                if reason
+                else "Evaluación no válida: reason con menos de 50 caracteres."
+            )
         return {"score": int(data.get("score", 0)), "reason": reason}
     except (json.JSONDecodeError, ValueError) as e:
-        return {"score": 0, "reason": f"No se pudo parsear la evaluación: {e}. Raw: {raw[:200]}..."}
+        return {
+            "score": 0,
+            "reason": f"No se pudo parsear la evaluación: {e}. Raw: {raw[:200]}...",
+        }
+
 
 def main(question):
     """Orquesta: cargar colección, buscar chunks, generar respuesta y evaluar. Retorna el JSON del plan."""
@@ -110,6 +127,7 @@ def main(question):
         "chunks_related": chunks_used,
         "evaluation": eval_result,
     }
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

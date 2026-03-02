@@ -1,9 +1,11 @@
 """Adaptador de LLM/embeddings para no acoplarse a un proveedor concreto."""
+
 from abc import ABC, abstractmethod
 from typing import List
 
-from src.config import EMBEDDING_MODEL, MODEL_ANSWER, MODEL_EVAL
+from src.config import EMBEDDING_MODEL
 from src.utils import get_openai_client
+
 
 class EmbeddingProvider(ABC):
     @abstractmethod
@@ -27,7 +29,9 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         resp = client.embeddings.create(model=model, input=text)
         return resp.data[0].embedding
 
-    def embed_batch(self, texts: List[str], model: str = EMBEDDING_MODEL) -> List[List[float]]:
+    def embed_batch(
+        self, texts: List[str], model: str = EMBEDDING_MODEL
+    ) -> List[List[float]]:
         client = get_openai_client()
         out = []
         for text in texts:
@@ -49,9 +53,10 @@ class OpenAILLMProvider(LLMProvider):
         return (resp.choices[0].message.content or "").strip()
 
 
-def get_embedding(text: str, model: str = None) -> List[float]:
+def get_embedding(text: str, model: str | None = None) -> List[float]:
     """Función de conveniencia: un solo texto, usa EMBEDDING_MODEL por defecto."""
     from src.config import EMBEDDING_MODEL as DEFAULT_MODEL
+
     provider = OpenAIEmbeddingProvider()
     return provider.embed(text, model=model or DEFAULT_MODEL)
 

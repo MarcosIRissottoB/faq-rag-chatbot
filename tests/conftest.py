@@ -1,6 +1,6 @@
 """Fixtures compartidos para tests. Documento temporal válido para chunking (≥20 chunks, 50–500 tokens por chunk)."""
+
 import pytest
-from pathlib import Path
 
 
 @pytest.fixture
@@ -34,8 +34,7 @@ def empty_doc_path(tmp_path):
 @pytest.fixture
 def huge_chunk_doc_path(tmp_path):
     """Documento con un bloque de >385 palabras en una línea/segmento que forme un chunk >500 tokens."""
-    # Un chunk de 400 palabras → 520 tokens → debe fallar validación
-    big_chunk = " palabra".join(["a"] * 400)
+    # Un chunk de 400 palabras → 520 tokens → debe fallar validación.
     # Necesitamos 20+ chunks; el primero será enorme. Con step 250, chunk 0 tiene words[0:300].
     # Para forzar un chunk >500 tokens: 500/1.3 ≈ 385 palabras. Crear doc donde el primer chunk tenga 400 palabras.
     words = ["w"] * 400 + ["z"] * 5000  # primer chunk 400 palabras
