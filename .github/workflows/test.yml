@@ -40,4 +40,4 @@ jobs:
           OPENAI_MODEL_ANSWER: "gpt-4o-mini"
           OPENAI_MODEL_EVAL: "gpt-4o-mini"
           OPENAI_EMBEDDING_MODEL: "text-embedding-3-small"
-        run: pytest tests/ -v --tb=long
+        run: python -m pytest tests/ -v --tb=long

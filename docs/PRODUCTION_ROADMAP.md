@@ -9,7 +9,7 @@ Cada ítem incluye: **motivo**, **explicación** y **sugerencia de mejora**.
 ## Resumen del estado actual
 
 - **Stack:** Python 3.11, ChromaDB, OpenAI (embeddings + GPT-4o-mini), CLI (`build_index`, `query`).
-- **Fortalezas:** Tests unitarios (pytest), CI (GitHub Actions), pre-commit (ruff, black, mypy), logging y timeout en llamadas LLM, configuración por `.env`, adaptadores para LLM y vector store.
+- **Fortalezas:** Tests unitarios (pytest), CI (GitHub Actions; configuración y troubleshooting en [docs/CI.md](CI.md)), pre-commit (ruff, black, mypy), logging y timeout en llamadas LLM, configuración por `.env`, adaptadores para LLM y vector store.
 - **Gaps principales:** Sin API HTTP, sin autenticación/autorización, sin observabilidad (métricas/trazas), configuración y secretos no listos para entornos múltiples, y dependencias/versiones desalineadas con el plan.
 
 ---

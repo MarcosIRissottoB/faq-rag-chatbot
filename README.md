@@ -86,6 +86,8 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 
 **Cómo comprobarlo:** en el repositorio, pestaña **Actions** → workflow **Tests** → ver el último run. Si el job termina en verde, los tests pasaron en CI. También puedes abrir un PR y ver el estado del workflow en la página del PR.
 
+**Si el workflow falla** (p. ej. "Process completed with exit code 2"): ver [docs/CI.md](docs/CI.md) para códigos de salida de pytest, cómo ver el log completo del paso "Run tests" y los ajustes aplicados en este repo (PYTHONPATH, `src/__init__.py`, etc.).
+
 ## Cómo probar
 
 1. **Construir el índice** (desde la raíz del proyecto):
@@ -122,4 +124,4 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 - `src/prompts/`: prompts del LLM (respuesta y evaluación).
 - `tests/`: tests unitarios (pytest) para `build_index` y `query`; `requirements-dev.txt` para dependencias de test.
 - `.github/workflows/test.yml`: workflow de CI que ejecuta los tests en cada push y en cada pull request.
-- `docs/`: documentación (flujo de datos, decisiones RAG, prompts, checklist).
+- `docs/`: documentación (flujo de datos, decisiones RAG, prompts, checklist, **CI.md** para troubleshooting de GitHub Actions).
