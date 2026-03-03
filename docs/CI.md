@@ -94,13 +94,13 @@ Si tras un push el workflow sigue fallando, revisa en qué paso falla (Debug imp
 - **Exit code 2** suele indicar problema de imports o de colección de tests; el mensaje concreto está en el **log del paso "Run tests"** en GitHub Actions.
 - Los cambios (system deps, `pip install -e .`, Debug imports, `PYTHONPATH`, `--tb=long`) están pensados para que CI sea estable y los fallos sean fáciles de diagnosticar (si falla Debug imports, se ve el import concreto; si falla Run tests, el traceback es largo).
 
-Para más detalle sobre cómo ejecutar tests en local, ver la sección **Tests** del [README](../README.md).
+Para ejecutar tests en local o con Docker, ver el [README](../README.md): secciones **Probar localmente** y **Probar con Docker**. Para construir el índice y hacer consultas con API real desde Docker, el README describe el uso de `export` desde `.env` y `OPENAI_API_KEY` en los comandos `docker run`.
 
 ---
 
 ## Antes de push: validar en local
 
-Para **evitar que el workflow falle en GitHub** sin haber probado antes, ejecuta en local los mismos pasos que el CI (Debug imports + pytest). Si todo pasa en local, es muy probable que pase en GH (salvo diferencias de sistema en Linux).
+Para **evitar que el workflow falle en GitHub** sin haber probado antes, podés validar de dos formas: (1) **en local** con venv y el script que replica el CI (Debug imports + pytest), o (2) **con Docker** (build + `docker run ...` con pytest). Ver el [README](../README.md), secciones **Probar localmente** y **Probar con Docker**. Si todo pasa en local o en el contenedor, es muy probable que pase en GH (salvo diferencias de sistema en Linux).
 
 **Requisito:** Python 3.11 (véase README y docs/PRODUCTION_ROADMAP).
 

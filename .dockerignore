@@ -1,0 +1,26 @@
+# Entornos virtuales y artefactos locales
+.venv/
+.venv-ci/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+*.pkl
+
+# No incluir datos sensibles ni ChromaDB local en la imagen
+.env
+chroma_db/
+
+# Git y documentación (opcional: quitar docs/ si quieres documentación en la imagen)
+.git/
+.gitignore
+docs/
+*.md
+!README.md
+
+# IDE y otros
+.idea/
+.vscode/
+.cursor/
+*.log

@@ -153,8 +153,8 @@ Cada ítem incluye: **motivo**, **explicación** y **sugerencia de mejora**.
 | Aspecto | Detalle |
 |--------|---------|
 | **Motivo** | Quien hace el deploy o el on-call necesita saber cómo levantar el servicio, cómo reindexar, qué variables son obligatorias y qué hacer ante fallos típicos. |
-| **Explicación** | El README está orientado a desarrollo. Falta una visión de “cómo se despliega y opera” y qué monitorizar. |
-| **Sugerencia** | Añadir `docs/OPERATIONS.md` (o sección en README) con: requisitos de entorno (Python, variables, puertos), comando de arranque de la API, cómo ejecutar `build_index` (cron/job), dónde mirar logs y métricas, y un mini runbook (índice corrupto, OpenAI caído, alta latencia). Incluir ejemplo de docker run o Dockerfile si se containeriza. |
+| **Estado actual** | El README documenta **Probar localmente** (tests, build_index, query con venv) y **Probar con Docker** (build, tests, build_index, query con `docker run` y variables/volúmenes). |
+| **Sugerencia (cuando exista API)** | Añadir `docs/OPERATIONS.md` o ampliar README con: comando de arranque de la API, cómo ejecutar `build_index` en cron/job, dónde mirar logs y métricas, y un mini runbook (índice corrupto, OpenAI caído, alta latencia). |
 
 ---
 
@@ -163,8 +163,8 @@ Cada ítem incluye: **motivo**, **explicación** y **sugerencia de mejora**.
 | Aspecto | Detalle |
 |--------|---------|
 | **Motivo** | Facilita despliegues uniformes en cualquier entorno y evita “funciona en mi máquina” por diferencias de sistema o de Python. |
-| **Explicación** | No hay Dockerfile ni docker-compose. Para CI o para que el equipo de plataforma despliegue, una imagen mínima que instale dependencias y ejecute la API (o el CLI) es un estándar. |
-| **Sugerencia** | Añadir `Dockerfile` multi-stage: etapa de build (opcional si no hay compilación) y etapa final con Python slim, `pip install -r requirements.txt`, y `CMD` para uvicorn o para el CLI. No incluir `.env` en la imagen; inyectar secretos en runtime. Opcional: `docker-compose.yml` con el servicio de la API y un volumen para `chroma_db` para desarrollo local. Incluir en `.dockerignore` `.venv`, `__pycache__`, `.git`, `chroma_db` si no se quiere persistir en build. |
+| **Estado actual** | El proyecto ya incluye `Dockerfile` y `.dockerignore`. La imagen permite ejecutar tests, `build_index` y `query`; los secretos se pasan en runtime (`-e OPENAI_API_KEY=...`). El [README](../README.md), sección **Probar con Docker**, describe cómo construir la imagen, ejecutar tests con clave ficticia y, para `build_index`/`query` con API real, cargar variables desde `.env` (`export $(grep -v '^#' .env | xargs)`) y usar `$OPENAI_API_KEY` en los `docker run`. |
+| **Sugerencia (futuro)** | Cuando exista API HTTP: extender el Dockerfile o añadir etapa para servir la API (uvicorn). Opcional: `docker-compose.yml` con el servicio y un volumen para `chroma_db`. |
 
 ---
 

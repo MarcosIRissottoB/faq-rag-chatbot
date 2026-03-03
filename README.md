@@ -33,32 +33,104 @@ Chatbot de preguntas frecuentes (FAQ) con RAG para HR SaaS: se construye un índ
    cp .env.example .env
    ```
 
-## Tests
+## Probar localmente
 
-El proyecto incluye **tests unitarios** con pytest para los módulos `build_index` y `query`. No se necesitan API keys reales: los tests usan mocks.
+Todo desde la **raíz del proyecto**, con el **entorno virtual activado** (y `.env` configurado si vas a usar `build_index` o `query`).
 
-**Cómo ejecutar los tests** (desde la raíz del proyecto, con el venv activado):
+### 1. Ejecutar los tests
 
-1. Instalar dependencias de test (solo la primera vez):
+El proyecto incluye tests unitarios (pytest) para `build_index` y `query`. No se necesitan API keys reales: los tests usan mocks.
 
-   ```bash
-   pip install -r requirements-dev.txt
-   ```
+- Instalar dependencias de test (solo la primera vez):
+  ```bash
+  pip install -r requirements-dev.txt
+  ```
+- Ejecutar todos los tests:
+  ```bash
+  pytest tests/ -v
+  ```
+  Si `pytest` no se encuentra: `python3 -m pytest tests/ -v`
+- Si falla el import por falta de `.env`, usá variables dummy solo para tests:
+  ```bash
+  OPENAI_API_KEY=sk-fake OPENAI_MODEL_ANSWER=gpt-4o-mini OPENAI_MODEL_EVAL=gpt-4o-mini OPENAI_EMBEDDING_MODEL=text-embedding-3-small pytest tests/ -v
+  ```
 
-2. Ejecutar todos los tests:
+### 2. Construir el índice
 
-   ```bash
-   pytest tests/ -v
-   ```
+```bash
+python -m src.build_index
+```
 
-   Si el comando `pytest` no se encuentra: `python3 -m pytest tests/ -v`
+Si el índice ya existe y el documento no cambió, verás *"Índice ya cargado (documento sin cambios)..."*. Para **reconstruir**: `python -m src.build_index --force`.
 
-3. Si falla el import por falta de `.env`, puedes usar variables dummy solo para los tests:
-   ```bash
-   OPENAI_API_KEY=sk-fake OPENAI_MODEL_ANSWER=gpt-4o-mini OPENAI_MODEL_EVAL=gpt-4o-mini OPENAI_EMBEDDING_MODEL=text-embedding-3-small pytest tests/ -v
-   ```
+Opcional (override de chunking): `python -m src.build_index --chunk-size 250 --chunk-overlap 50`. Los valores por defecto están en `src/constants.py`.
 
-**Qué se prueba:** `build_index` (load_and_chunk_document, generate_embeddings, save_to_chroma, index_already_loaded) y `query` (load_chroma_collection, search_similar_chunks, generate_answer, evaluate_response, main).
+### 3. Hacer una consulta
+
+```bash
+python -m src.query --question "¿Qué pasos debo seguir en mi proceso de onboarding?"
+```
+
+La salida es JSON (pregunta, respuesta, chunks usados, evaluación).
+
+### Solución de problemas (local)
+
+- **`no such column: collections.topic`** al ejecutar `build_index` o `query`: la base de ChromaDB en `./chroma_db` tiene un esquema antiguo. Borrá la carpeta y volvé a construir el índice:
+  ```bash
+  rm -rf ./chroma_db
+  python -m src.build_index
+  ```
+- **`Client.__init__() got an unexpected keyword argument 'proxies'`**: incompatibilidad entre la librería `openai` y versiones recientes de `httpx`. El proyecto fija `httpx<0.28` en `requirements.txt`. Asegurate de instalar con `pip install -r requirements.txt` en un entorno limpio.
+
+---
+
+## Probar con Docker
+
+Podés construir una imagen y ejecutar tests o los comandos del proyecto **sin instalar dependencias en tu máquina**. La API key no va en el Dockerfile; se pasa al ejecutar el contenedor (`-e OPENAI_API_KEY=...`).
+
+### 1. Construir la imagen
+
+Desde la raíz del proyecto:
+
+```bash
+docker build -t faq-rag-chatbot:latest .
+```
+
+### 2. Ejecutar los tests en el contenedor
+
+Es obligatorio pasar `OPENAI_API_KEY` (para tests podés usar un valor ficticio):
+
+```bash
+docker run --rm -e OPENAI_API_KEY=sk-fake faq-rag-chatbot:latest
+```
+
+Por defecto el contenedor ejecuta pytest. Para otro comando, sobreescribilo al final:  
+`docker run --rm -e OPENAI_API_KEY=sk-fake faq-rag-chatbot:latest python -m pytest tests/ -v`
+
+### 3. Construir el índice (con tu API key y persistir ChromaDB)
+
+Para `build_index` y `query` necesitás una **API key real** de OpenAI (no el valor ficticio de los tests). La forma más práctica es cargar las variables desde tu `.env` y usarlas en el contenedor:
+
+```bash
+export $(grep -v '^#' .env | xargs)
+docker run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -v $(pwd)/chroma_db:/app/chroma_db faq-rag-chatbot:latest python -m src.build_index
+```
+
+Para forzar reconstrucción del índice: añadí `--force` al final del comando anterior.
+
+Alternativa: si no usás `.env`, reemplazá `$OPENAI_API_KEY` por tu clave real (el texto `tu-key-real` en los ejemplos del README es solo un placeholder y fallará con error 401).
+
+### 4. Hacer una consulta (misma API key y volumen)
+
+Con las variables ya exportadas desde `.env` (mismo `export` del paso 3):
+
+```bash
+docker run --rm -e OPENAI_API_KEY=$OPENAI_API_KEY -v $(pwd)/chroma_db:/app/chroma_db faq-rag-chatbot:latest python -m src.query --question "¿Qué pasos debo seguir en mi proceso de onboarding?"
+```
+
+**Resumen:** siempre `-e OPENAI_API_KEY=...`; para `build_index` y `query` usá `-v $(pwd)/chroma_db:/app/chroma_db` para persistir el índice. Si al escribir en `chroma_db` ves errores de permisos (el contenedor corre como usuario no-root), podés usar `--user root` en ese `docker run` o asegurar que el directorio en el host sea escribible.
+
+---
 
 ## Desarrollo (linting y formato)
 
@@ -86,26 +158,9 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 
 **Cómo comprobarlo:** en el repositorio, pestaña **Actions** → workflow **Tests** → ver el último run. Si el job termina en verde, los tests pasaron en CI. También puedes abrir un PR y ver el estado del workflow en la página del PR.
 
-**Antes de hacer push:** para evitar que falle el CI sin haber probado, ejecuta en local los mismos pasos que el workflow (Debug imports + pytest). Ver [docs/CI.md](docs/CI.md) sección **"Antes de push: validar en local"** (venv con Python 3.11, `pip install -r requirements.txt -r requirements-dev.txt`, `pip install -e .`, luego `./scripts/simulate_ci_debug.sh`).
+**Antes de hacer push:** podés validar en local (venv + pytest) o con Docker. Ver [docs/CI.md](docs/CI.md) sección **"Antes de push: validar en local"** y en este README **Probar localmente** / **Probar con Docker**.
 
 **Si el workflow falla** (p. ej. "Process completed with exit code 2"): ver [docs/CI.md](docs/CI.md) para códigos de salida de pytest, cómo ver el log completo del paso "Run tests" y los ajustes aplicados en este repo.
-
-## Cómo probar
-
-1. **Construir el índice** (desde la raíz del proyecto):
-   `python -m src.build_index`
-   Si el índice ya está creado y el documento no ha cambiado, verás el mensaje *"Índice ya cargado (documento sin cambios)...";* en ese caso no se reconstruye a menos que uses `--force`.
-   Para **reconstruir el índice** (por ejemplo tras cambiar el documento o la métrica de Chroma):  
-   `python -m src.build_index --force`
-
-   **Chunking (por defecto, sin flags):** se toma de `src/constants.py` usando `CHUNK_SIZE_DEFAULT` y `CHUNK_OVERLAP_DEFAULT`.
-   Si quieres cambiar los defaults para no pasar flags en cada ejecución, edita esos valores en `src/constants.py`.
-
-   **Override opcional por CLI (si necesitas probar valores puntuales):**
-   `python -m src.build_index --chunk-size 250 --chunk-overlap 50`
-
-2. Hacer una consulta:
-   `python -m src.query --question "¿Qué pasos debo seguir en mi proceso de onboarding?"`
 
 ## Decisiones técnicas
 
@@ -127,4 +182,5 @@ Los tests se ejecutan automáticamente en **GitHub Actions** en cada:
 - `tests/`: tests unitarios (pytest) para `build_index` y `query`; `requirements-dev.txt` para dependencias de test.
 - `pyproject.toml`: definición del proyecto e instalación editable (`pip install -e .`) para CI y desarrollo.
 - `.github/workflows/test.yml`: workflow de CI que ejecuta los tests en cada push y en cada pull request.
+- `Dockerfile` y `.dockerignore`: imagen Docker para ejecutar tests, `build_index` y `query` (ver sección **Probar con Docker** en este README).
 - `docs/`: documentación (flujo de datos, decisiones RAG, prompts, checklist, **CI.md** para troubleshooting de GitHub Actions).
